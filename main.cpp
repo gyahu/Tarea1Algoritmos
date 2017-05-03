@@ -9,51 +9,69 @@ void redirect(string batch, std::vector<int> pivots, std::vector<FILE *> buckets
 }
 
 /* Sorts the file using pivotAmmount pivots and acording to the index */
-void sort(FILE * data, int pivotAmmount, int index){
+void fileSort(FILE * data, int pivotAmmount, int index, int mainMemory){
 
-	/* Variables per sort */
-	std::vector<int> pivots(pivotAmmount, 0);
-	std::vector<FILE *> buckets(pivotAmmount+1);
-	string buffer;
-  	fpos_t position;
-	int counter = 0;
+	/* Check size file againt mainMemory */
+	file.seekg(0, ios::end);
+    int fileSize = file.tellg();
 
-	buffer = (char *) malloc(size);
-  	fgetpos (pFile, &position);
+    if (fileSize <= mainMemory){
+    	// standard sorting algorithm
+    }
+	else{
 
-  	/* Get pivots */
-  	while (counter < pivotAmmount){
+		/* Variables per sort */
+		std::vector<int> pivots(pivotAmmount, 0);
+		std::vector<FILE *> buckets(pivotAmmount+1);
+		FILE * output;
+		string buffer;
+	  	fpos_t position;
+		int counter = 0;
 
-	  	/* Move data to main memory */
-	  	result = fread(buffer, 1, size, pFile);
+		buffer = (char *) malloc(size);
+	  	fgetpos (pFile, &position);
 
-	  	// pivots[counter] = value;
+	  	/* Get pivots */
+	  	while (counter < pivotAmmount){
 
-	  	++counter;
-  	}
+		  	/* Move data to main memory */
+		  	result = fread(buffer, 1, size, pFile);
 
-  	/* Open files for each bucket */
-  	for (int i = 0; i < pivotAmmount; ++i){
-  		buckets[i] = fopen("bucket"+to_string(i), "a+");
-  	}
+		  	{
+		  	// pivots[counter] = value;
 
-  	/* Restart the file position */
-  	fsetpos (pFile, &position);
+		  	++counter;
+		  	}
+	  	}
 
-  	/* Move data to buckets by batches */
-  	while (fread(buffer, 1, size, pFile)){
-  		redirect(buffer, pivots, buckets, index);
-  	}
+	  	/* Open files for each bucket */
+	  	for (int i = 0; i < pivotAmmount; ++i){
+	  		buckets[i] = fopen("bucket"+to_string(i), "a+");
+	  	}
 
-  	/* CLOSE */
-  	for (int i = 0; i < pivotAmmount; ++i){
-  		fclose(buckets[i]);
-  	}
+	  	/* Restart the file position */
+	  	fsetpos (pFile, &position);
+
+	  	/* Move data to buckets by batches */
+	  	while (fread(buffer, 1, size, pFile)){
+	  		redirect(buffer, pivots, buckets, index);
+	  	}
+
+	  	for (int i = 0; i < pivotAmmount; ++i){
+	  		fileSort(buckets[i], pivotAmmount, index, mainMemory);
+	  	}
+
+	  	/* CLOSE */
+	  	for (int i = 0; i < pivotAmmount; ++i){
+	  		fclose(buckets[i]);
+	  	}
+    }
 }
 
 int main(){
 
 	/* Global variables */
+	int M = 0;
 	int S = 0;
 	int pivotAmmount = S*log2(S);
 	size_t result;
@@ -67,8 +85,8 @@ int main(){
 		string dir_path("folder_2**"+to_string(i));
 	  	pFile = fopen (dir_path+"raw_data.txt", "r");
 
-		sort(pFile, pivotAmmount, 1);
-		sort(pFile, pivotAmmount, 2);
+		fileSort(pFile, pivotAmmount, 1, M);
+		fileSort(pFile, pivotAmmount, 2, M);
 			
 	  	/* CLOSE */
 	  	fclose(pFile)
