@@ -19,23 +19,21 @@ void fileSort(FILE * data, int pivotAmmount, int index, int mainMemory){
     	// standard sorting algorithm
     }
 	else{
-
 		/* Variables per sort */
 		std::vector<int> pivots(pivotAmmount, 0);
 		std::vector<FILE *> buckets(pivotAmmount+1);
-		FILE * output;
 		string buffer;
 	  	fpos_t position;
 		int counter = 0;
 
 		buffer = (char *) malloc(size);
-	  	fgetpos (pFile, &position);
+	  	fgetpos (data, &position);
 
 	  	/* Get pivots */
 	  	while (counter < pivotAmmount){
 
 		  	/* Move data to main memory */
-		  	result = fread(buffer, 1, size, pFile);
+		  	result = fread(buffer, 1, size, data);
 
 		  	{
 		  	// pivots[counter] = value;
@@ -46,14 +44,14 @@ void fileSort(FILE * data, int pivotAmmount, int index, int mainMemory){
 
 	  	/* Open files for each bucket */
 	  	for (int i = 0; i < pivotAmmount; ++i){
-	  		buckets[i] = fopen("bucket"+to_string(i), "a+");
+	  		buckets[i] = fopen("bucket"+to_string(i), "a+"); //Recursion problem, specify the name acording to data variable.
 	  	}
 
 	  	/* Restart the file position */
-	  	fsetpos (pFile, &position);
+	  	fsetpos (data, &position);
 
 	  	/* Move data to buckets by batches */
-	  	while (fread(buffer, 1, size, pFile)){
+	  	while (fread(buffer, 1, size, data)){
 	  		redirect(buffer, pivots, buckets, index);
 	  	}
 
