@@ -30,21 +30,45 @@ int main(){
 
 		/* Open raw data */
 		FILE * pFile;
+  		fpos_t position;
 		string buffer;
-	  	pFile = fopen ("raw_data.txt", "w");
+	  	pFile = fopen ("raw_data.txt", "r");
+  		fgetpos (pFile, &position);
+		buffer = (char *) malloc(size);
 
 	  	/* SORT */
+
+		int counter = 0;
 	  	/* Get pivots */
-	  	for (int i = 0; i < pivotAmmount; ++i){
+	  	while (counter < pivotAmmount){
 
 		  	/* Move data to main memory */
-		  	buffer = (char *) malloc(size);
 		  	result = fread(buffer, 1, size, pFile);
 
-		  	// pivots[i] = value;
+		  	// pivots[counter] = value;
 
+		  	++counter;
 	  	}
 
+	  	/* Open files for each bucket */
+	  	for (int i = 0; i < pivotAmmount; ++i){
+	  		buckets[i] = fopen("bucket"+to_string(i), "a+");
+	  	}
+
+	  	/* Restart the file */
+	  	fsetpos (pFile, &position);
+
+	  	/* Move data to buckets by batches */
+	  	while (fread(buffer, 1, size, pFile)){
+	  		redirect(buffer, pivots, buckets);
+	  	}
+
+
+	  	/* CLOSE */
+
+	  	for (int i = 0; i < pivotAmmount; ++i){
+	  		fclose(buckets[i]);
+	  	}
 
 	  	fclose(pFile)
 	}
