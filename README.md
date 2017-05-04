@@ -1,2 +1,2 @@
-# Tarea1Algoritmos
-Interseccioon de segmentos ortogonales
+# Tarea 1 Diseño y Analisis de Algoritmos
+Intersección de segmentos ortogonales.
