@@ -22,14 +22,18 @@ def generate_segments(N, distribution, alpha):
     vs_qty = int((2**N)*(1-alpha))
     hs_qty = int((2**N)*alpha)
 
+    vs_ctr = 0
+    hs_ctr = 0
 
-    segments = []
+    ## Using sets make checking if a segment is in the generated set faster.
+    segments = set()
     bound = math.floor(2**(N/2))
-    for i in range(0,vs_qty):
+    ## ------------------------------------------------------------------------
+    ## Vertical Segments generation:
+    while True:
         ## --------------------------------------------------------------------
         ## --------------------------------------------------------------------
         ## First we generate x coordinates with its corresponding distribution:
-
         if(distribution == 'uniform'):
             x_1 = x_2 = math.floor(np.random.uniform(-bound, bound))
         elif(distribution == 'normal'):
@@ -48,10 +52,18 @@ def generate_segments(N, distribution, alpha):
         while(y_1 == y_2):
             y_1 = math.floor(np.random.uniform(-bound, bound))
             y_2 = math.floor(np.random.uniform(-bound, bound))
-        ## --------------------------------------------------------------------
-        segments.append([x_1, y_1, x_2, y_2])
 
-    for i in range(0,hs_qty):
+        ## --------------------------------------------------------------------
+
+        if((x_1, y_1, x_2, y_2) not in segments):
+            segments.add((x_1, y_1, x_2, y_2))
+            vs_ctr += 1
+        if(vs_ctr == vs_qty):
+            break
+    ## ------------------------------------------------------------------------
+    ## Horizontal Segments generation:
+    while True:
+
         ## 1.2 : IDEM 1.1
         x_1 = math.floor(np.random.uniform(-bound, bound))
         x_2 = math.floor(np.random.uniform(-bound, bound))
@@ -60,9 +72,13 @@ def generate_segments(N, distribution, alpha):
             x_2 = math.floor(np.random.uniform(-bound, bound))
 
         y_1 = y_2 = math.floor(np.random.uniform(-bound, bound))
-        segments.append([x_1, y_1, x_2, y_2])
+        if ((x_1, y_1, x_2, y_2) not in segments):
+            segments.add((x_1, y_1, x_2, y_2))
+            hs_ctr += 1
+        if (hs_ctr == hs_qty):
+            break
 
-
+    segments = list(segments)
     ## 1.3 : If we don't shuffle, then the segments list would end up with all the
     ##       vertical segments first and then all the horizontal ones.
     np.random.shuffle(segments)
