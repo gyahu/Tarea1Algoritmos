@@ -1,32 +1,90 @@
 #include <stdio.h>
+#include <vector.h>
 #include <boost/filesystem.hpp>
 
 using namespace std;
 
 /* Moves the different values to the corresponding bucket */
-void redirect(string batch, std::vector<int> pivots, std::vector<FILE *> buckets, int index){
+void redirect(string batch, std::vector<float> pivots, std::vector<FILE *> buckets, int index){
+	std::istringstream batch(batch);
+	std::vector<strings> coordinates;
 
+	/* Process the batch by line */
+    while (std::getline(batch, line)) {
+    	boost::split(coordinates, line, boost::is_any_of(" "));
+        float primary = strtof(coordinates[index], NULL);
+        unsigned int i = 0;
+        for (; i < pivots.size(); ++i){
+        	if (pivots[i] > primary){
+        		buckets[i] << line << "\n";
+        		break;
+        	}
+        }
+        if pivots[i-1] < primary{
+        	buckets[i] << line << "\n";
+        }
+    }
+}
+
+struct Comparator {
+    Comparator(int index) { this->index = index; }
+    bool operator(std::vector<string> coordinates1, std::vector<string> coordinates2){
+		float primary1 = strtof(coordinates1[index], NULL);
+		float secondary1 = strtof(coordinates1[index+2], NULL);
+	    float tertiary1 = strtof(coordinates1[(index+1)%2], NULL);
+	    float quaternary1 = strtof(coordinates1[(index+1)%2+2], NULL);
+		float primary2 = strtof(coordinates1[index], NULL);
+		float secondary2 = strtof(coordinates1[index+2], NULL);
+	    float tertiary2 = strtof(coordinates1[(index+1)%2], NULL);
+	    float quaternary2 = strtof(coordinates1[(index+1)%2+2], NULL);
+	    if (primary1 == primary2){
+	    	if (secondary1 == secondary2){
+	    		if (tertiary1 == tertiary2){
+	    			return quaternary1 < quaternary2;
+	    		}
+	    		return tertiary1 < tertiary2;
+	    	}
+	    	return secondary1 < secondary2;
+	    }
+	    return primary1 <primary2;
+	}
+    int index;
+};
+
+void mainSort(string batch, int index){
+	std::istringstream batch(batch);
+	std::vector<strings> coordinates;
+	std::vector<std::vector<float>> segments;
+	while (std::getline(batch, line)) {
+		boost::split(coordinates, line, boost::is_any_of(" "));
+        segments.push_back(coordinates);
+    }
+    std::sort(segments.begin(), segments.end()), Comparator(index));
 }
 
 /* Sorts the file using pivotAmmount pivots and acording to the index */
 void fileSort(FILE * data, int pivotAmmount, int index, int mainMemory){
+
+	size_t result;
+	string buffer;
+	buffer = (char *) malloc(size);
 
 	/* Check size file againt mainMemory */
 	file.seekg(0, ios::end);
     int fileSize = file.tellg();
 
     if (fileSize <= mainMemory){
-    	// standard sorting algorithm
+    	result = fread(buffer, 1, size, data);
+    	mainSort(buffer, index);
     }
 	else{
 		/* Variables per sort */
-		std::vector<int> pivots(pivotAmmount, 0);
-		std::vector<FILE *> buckets(pivotAmmount+1);
-		string buffer;
+		std::vector<float> pivots(pivotAmmount, 0);
+		std::vector<FILE *> buckets(pivotAmmount+1, NULL);
+		
 	  	fpos_t position;
 		int counter = 0;
 
-		buffer = (char *) malloc(size);
 	  	fgetpos (data, &position);
 
 	  	/* Get pivots */
@@ -72,7 +130,6 @@ int main(){
 	int M = 0;
 	int S = 0;
 	int pivotAmmount = S*log2(S);
-	size_t result;
 	int size = sizeof(char);
 
 	/* Iterate for the different possible data sizes */
@@ -83,8 +140,8 @@ int main(){
 		string dir_path("folder_2**"+to_string(i));
 	  	pFile = fopen (dir_path+"raw_data.txt", "r");
 
+		fileSort(pFile, pivotAmmount, 0, M);
 		fileSort(pFile, pivotAmmount, 1, M);
-		fileSort(pFile, pivotAmmount, 2, M);
 			
 	  	/* CLOSE */
 	  	fclose(pFile)
