@@ -31,31 +31,35 @@ def generate_segments(N, distribution, alpha):
         ## First we generate x coordinates with its corresponding distribution:
 
         if(distribution == 'uniform'):
-            x_1 = x_2 = np.random.uniform(-bound, bound)
+            x_1 = x_2 = math.floor(np.random.uniform(-bound, bound))
         elif(distribution == 'normal'):
             ## 1.0 : The idea here is to have 95% of the points between -2^(N/2) and 2^(N/2) .
             ##       Still not sure if it will behave well, we could need to change this.
             sigma = bound / 1.65
-            x_1 = x_2 = np.random.normal(0, sigma)
+            x_1 = x_2 = math.floor(np.random.normal(0, sigma))
 
         ## --------------------------------------------------------------------
         ## --------------------------------------------------------------------
 
         ## Now we generate the y coordinates:
         ## 1.1 : Not sure if we need to check that y_1 != y_2, could this really not happen?
-        y_1, y_2 = np.random.uniform(-bound, bound, 2)
+        y_1 = math.floor(np.random.uniform(-bound, bound))
+        y_2 = math.floor(np.random.uniform(-bound, bound))
         while(y_1 == y_2):
-            y_1, y_2 = np.random.uniform(-bound, bound, 2)
+            y_1 = math.floor(np.random.uniform(-bound, bound))
+            y_2 = math.floor(np.random.uniform(-bound, bound))
         ## --------------------------------------------------------------------
         segments.append([x_1, y_1, x_2, y_2])
 
     for i in range(0,hs_qty):
         ## 1.2 : IDEM 1.1
-        x_1, x_2 = np.random.uniform(-bound, bound, 2)
+        x_1 = math.floor(np.random.uniform(-bound, bound))
+        x_2 = math.floor(np.random.uniform(-bound, bound))
         while(x_1 == x_2):
-            x_1, x_2 = np.random.uniform(-bound, bound, 2)
+            x_1 = math.floor(np.random.uniform(-bound, bound))
+            x_2 = math.floor(np.random.uniform(-bound, bound))
 
-        y_1 = y_2 = np.random.uniform(-bound, bound, 1)[0]
+        y_1 = y_2 = math.floor(np.random.uniform(-bound, bound))
         segments.append([x_1, y_1, x_2, y_2])
 
 
