@@ -55,6 +55,14 @@ public class Main {
 	    //testGetBuckets.forEach(System.out::println);
 
 	    */
+        /*
+        List<Integer> pivots = getPivots(50, inputPath.toString(), N.intValue(), "x");
+
+        for (int p: pivots) {
+            System.out.print(p+" ");
+        }
+        */
+
     }
 
 
@@ -65,7 +73,7 @@ public class Main {
     *  lengthOfFile: Number of lines in the file. This is used as an upper bound to generate the random sample of lines.
     *  coordToSort: Coordinate by which we are sorting the file (x or y).
     * */
-    public List<Integer> getPivots(int S, String path, int lengthOfFile, String coordToSort){
+    public static List<Integer> getPivots(int S, String path, int lengthOfFile, String coordToSort){
         try{
             // First we need to take S*log(S) samples at random from the file.
             RandomAccessFile raf = new RandomAccessFile(path,"rw");
@@ -77,9 +85,13 @@ public class Main {
             // generated at random.
             int sampleIndexes[] = new Random().ints(1, lengthOfFile).distinct().limit(sampleSize).toArray();
 
+
             for (int index: sampleIndexes) {
-                // We position ourselfes at the line inside the file.
+                // We position ourselves at the byte position inside the file.
                 raf.seek((long) index);
+                // We need to do this because the index can leave us in the middle of a line. So readline reads until
+                // finding a \n character. The next time we do readline we are sure we are reading a whole line.
+                raf.readLine();
                 // This fancy one-liner simple reads the line in which we are, splits it by ',' and generates
                 // an array of integers segments = [x_1 , y_1, x_2, y_2].
                 int segment[] = Stream.of(raf.readLine().split(",")).mapToInt(Integer::parseInt).toArray();
@@ -90,17 +102,23 @@ public class Main {
             Collections.sort(segments, new SegmentComparator(coordToSort));
 
             // We take the first Log(S) segments from the sample.
-            segments = segments.subList(0, (int)Math.ceil(Math.log(S)));
+            List<int[]> selectedSegments = new ArrayList<>();
+            for (int i = 1; i < S; i++) {
+                selectedSegments.add(segments.get((int)Math.floor(i*Math.log(S))));
+            }
 
 
             List<Integer> pivots = new ArrayList<>();
 
             // Depending on which coordinate we are sorting by we add the corresponding one to the pivots list.
-            for (int[] s: segments){
-                if(coordToSort.equals("x")){
+            if(coordToSort.equals("x")){
+                for (int[] s: selectedSegments){
                     pivots.add(s[0]);
                 }
-                if(coordToSort.equals("y")){
+            }
+
+            if(coordToSort.equals("y")) {
+                for (int[] s : selectedSegments) {
                     pivots.add(s[1]);
                 }
             }
@@ -156,9 +174,9 @@ public class Main {
                     // Note that a segment is vertical if both of its y coordinates are the same.
                     // So if Segment one is vertical, we claim it larger by comparison.
                     if(Integer.compare(segmentOne[0], segmentOne[2]) == 0){
-                        return -1;
-                    }else{
                         return 1;
+                    }else{
+                        return -1;
                     }
                 // Case 2: The two segments differ in at least one y coordinate.
                 }else{
