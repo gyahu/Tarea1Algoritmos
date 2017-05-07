@@ -56,15 +56,15 @@ public class Main {
 	    //testGetBuckets.forEach(System.out::println);
 
 	    */
-        /*
-        List<Integer> pivots = getPivots(50, inputPath.toString(), N.intValue(), "x");
+
+        List<Integer> pivots = getPivots(15, inputPath.toString(), N.intValue(), "x");
 
         for (int p: pivots) {
             System.out.print(p+" ");
         }
-        */
 
-        distributionSort(input, inputPath, 50, "x");
+
+        //distributionSort(input, inputPath, 50, "x");
 
     }
 
@@ -87,8 +87,8 @@ public class Main {
                 System.out.println(String.format("%d, %d, %d, %d", segment[0],segment[1],segment[2],segment[3]));
                 //placeSegmentInBucket(segment, bucketBuffers, pivots);
             }
-            System.out.println("End of inputBuffer -----------------------------------------------------------");
-            System.out.println(input.position()+" "+input.size());
+            //System.out.println("End of inputBuffer -----------------------------------------------------------");
+            //System.out.println(input.position()+" "+input.size());
 
 
         }
@@ -103,6 +103,8 @@ public class Main {
     *  path: Path to file we are sorting later on with the pivots found here.
     *  lengthOfFile: Number of lines in the file. This is used as an upper bound to generate the random sample of lines.
     *  coordToSort: Coordinate by which we are sorting the file (x or y).
+    *  It is important to note that if S is to large (by construction this can not happen) in comparison to lengthOfFile
+    *  it may happen that the number of distinct coordinates (candidates por pivots) is < sampleSize.
     * */
     public static List<Integer> getPivots(int S, String path, int lengthOfFile, String coordToSort){
         try{
@@ -111,22 +113,29 @@ public class Main {
             int sampleSize = (int)Math.floor(S*Math.log(S));
             // We will store out sampled segments here:
             List<int[]> segments = new ArrayList<>();
-
-            // These correspond to line numbers. For every line we have a segment, so we need sampleSize line numbers
-            // generated at random.
-            int sampleIndexes[] = new Random().ints(1, lengthOfFile).distinct().limit(sampleSize).toArray();
+            Random indexGenerator = new Random();
+            int indexCoordToSort = coordToSort.compareTo("x") == 0 ? 0 : 1;
 
 
-            for (int index: sampleIndexes) {
-                // We position ourselves at the byte position inside the file.
+            List<Integer> coordsAddedSoFar = new ArrayList<>();
+            String line;
+            int index;
+
+            while(segments.size() < sampleSize){
+                // These correspond to line numbers. For every line we have a segment, so we need sampleSize line numbers
+                index = indexGenerator.nextInt(lengthOfFile);
                 raf.seek((long) index);
                 // We need to do this because the index can leave us in the middle of a line. So readline reads until
                 // finding a \n character. The next time we do readline we are sure we are reading a whole line.
                 raf.readLine();
-                // This fancy one-liner simple reads the line in which we are, splits it by ',' and generates
-                // an array of integers segments = [x_1 , y_1, x_2, y_2].
-                int segment[] = Stream.of(raf.readLine().split(",")).mapToInt(Integer::parseInt).toArray();
-                segments.add(segment);
+                // This condition checks that we are not in the EOF.
+                if((line = raf.readLine()) != null){
+                    int segment[] = Stream.of(line.split(",")).mapToInt(Integer::parseInt).toArray();
+                    if(!coordsAddedSoFar.contains(segment[indexCoordToSort])){
+                        segments.add(segment);
+                        coordsAddedSoFar.add(segment[indexCoordToSort]);
+                    }
+                }
             }
 
             // As stated in the pdf we sort the sampled segments. See SegmentComparator.
