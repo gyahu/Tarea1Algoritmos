@@ -1,5 +1,6 @@
 package dcc.daa;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.*;
@@ -12,14 +13,14 @@ import java.nio.channels.FileChannel;
 public class Main {
 
     static Random bucketNameGenerator = new Random();
+    static int B;
+    static int M;
 
     public static void main(String[] args) throws IOException{
 
         Path inputPath;
         FileChannel input;
         Long N;
-        int B;
-        int M;
         int S;
 
         inputPath = Paths.get(args[2]);
@@ -62,6 +63,36 @@ public class Main {
             System.out.print(p+" ");
         }
         */
+
+        distributionSort(input, inputPath, 50, "x");
+
+    }
+
+    public static void distributionSort(FileChannel input, Path path, int S, String coordToSort) throws IOException{
+        int N = (int) input.size();
+        List<Path> buckets = getBuckets(S);
+        List<List<Integer>> bucketBuffers = getBucketsBuffers(S);
+        List<Integer> pivots = getPivots(S, path.toString(), N, coordToSort);
+        List<int[]> inputBuffer;
+
+        //System.out.println(buckets.size()+" = "+bucketBuffers.size()+" ?");
+        //System.out.println(pivots.size());
+
+
+        int coord = coordToSort.compareTo("x") == 0 ? 0 : 1;
+
+        while(Math.abs(input.position() - input.size()) > 1){
+            inputBuffer = getInputBuffer(input, B);
+            for (int segment[]: inputBuffer) {
+                System.out.println(String.format("%d, %d, %d, %d", segment[0],segment[1],segment[2],segment[3]));
+                //placeSegmentInBucket(segment, bucketBuffers, pivots);
+            }
+            System.out.println("End of inputBuffer -----------------------------------------------------------");
+            System.out.println(input.position()+" "+input.size());
+
+
+        }
+
 
     }
 
@@ -200,7 +231,7 @@ public class Main {
     * a segment to it.
     * S: See pdf. Corresponds to min(m , n/m)
     * */
-    public List<List<Integer>> getBucketsBuffers(int S){
+    public static List<List<Integer>> getBucketsBuffers(int S){
         List<List<Integer>> bucketBufferList = new ArrayList<>();
         for (int i = 0; i < S; i++) {
             bucketBufferList.add(new ArrayList<Integer>());
@@ -260,6 +291,13 @@ public class Main {
 
             // We get the first char from the buffer and check if it is a end of line.
             c = (char)byteBuffer.get();
+            if(c == '\n' && !byteBuffer.hasRemaining()){
+                EOBuffer = true;
+            }
+            // This case happens when the last chunk read left us at the end of a line.
+            if(c == '\n' && byteBuffer.hasRemaining()){
+                c = (char)byteBuffer.get();
+            }
             while(c != '\n'){
                 lineString += c;
                 /*
@@ -281,6 +319,7 @@ public class Main {
              * This one-liner simply gets the lineString of the form "x1,y1,x2,y2", strips it by ',' and converts each
              * component to an integer, then an array of integers.
             */
+            //System.out.println(lineString);
             segments = Stream.of(lineString.split(",")).mapToInt(Integer::parseInt).toArray();
             lines.add(segments);
             lineString = "";
@@ -304,7 +343,8 @@ public class Main {
             }
         }
         // Finally, we update de input file's position to the end of the last line we were able to read completely.
-        input.position(input.position() - fileRewind);
+        input.position(input.position() - fileRewind - 1);
+
 
         return lines;
     }
