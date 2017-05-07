@@ -9,6 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.APPEND;
 
 public class Main {
 
@@ -57,43 +61,132 @@ public class Main {
 
 	    */
 
-        List<Integer> pivots = getPivots(15, inputPath.toString(), N.intValue(), "x");
+        /*List<Integer> pivots = getPivots(15, inputPath.toString(), N.intValue(), "x");
 
         for (int p: pivots) {
             System.out.print(p+" ");
         }
+        */
 
 
-        //distributionSort(input, inputPath, 50, "x");
+        distributionSortStep(input, inputPath, 4, "x");
 
     }
 
-    public static void distributionSort(FileChannel input, Path path, int S, String coordToSort) throws IOException{
+    /*
+    * Applies one step of distribution Sort to input, which is located at path.
+    * input : FileChannel with the file to sort.
+    * path : Path to the file to sort.
+    * S : See pdf. Corresponds to min(m , n/m)
+    * coordToSort: Coordinate by which we are sorting the file (x or y).
+    *
+    * When this is done it generates S files, each one represents a resulting bucket.
+    *
+    * First tested with "input-2-9-normal-0.25.csv", B = 300. (M = 5, not used yet though)
+    * */
+    public static void distributionSortStep(FileChannel input, Path path, int S, String coordToSort) throws IOException{
+        // Input size in bytes.
         int N = (int) input.size();
+        // Here we will keep the locations of the buckets files.
         List<Path> buckets = getBuckets(S);
-        List<List<Integer>> bucketBuffers = getBucketsBuffers(S);
+        // List of the buffers for each bucket.
+        List<List<String>> bucketBuffers = getBucketsBuffers(S);
+        // Array that keeps track of amount of bytes kept in each buffer. We need this to check when to flush
+        // a bucket buffer to secondary memory (when its amount of bytes is greater than B).
+        int[] bucketBufferSizes = new int[bucketBuffers.size()];
+        // Pivots for sorting.
         List<Integer> pivots = getPivots(S, path.toString(), N, coordToSort);
-        List<int[]> inputBuffer;
+        // File input buffer. Here we will store each chunk read from the file input.
+        List<String> inputBuffer;
 
-        //System.out.println(buckets.size()+" = "+bucketBuffers.size()+" ?");
-        //System.out.println(pivots.size());
+        /*
+        for (int p: pivots) {
+            System.out.print(p+" ");
+        }
+        */
 
-
+        // This structure allows us to easily identify to which bucket does a point belong to.
+        // See generateBucketMapID for details and example.
+        NavigableMap<Integer, Integer> bucketMapID = generateBucketMapID(pivots);
         int coord = coordToSort.compareTo("x") == 0 ? 0 : 1;
 
+        // If the position in which we are located inside the input file
+        // is very similar to its size, it means we reached the EOF.
         while(Math.abs(input.position() - input.size()) > 1){
+            // We fill the input buffer with a chunk of lines read from the input file.
             inputBuffer = getInputBuffer(input, B);
-            for (int segment[]: inputBuffer) {
-                System.out.println(String.format("%d, %d, %d, %d", segment[0],segment[1],segment[2],segment[3]));
-                //placeSegmentInBucket(segment, bucketBuffers, pivots);
-            }
-            //System.out.println("End of inputBuffer -----------------------------------------------------------");
-            //System.out.println(input.position()+" "+input.size());
 
+            // Iterate through the lines in the input buffer. Note that each line a is a segment.
+            for (String line: inputBuffer) {
+                // One liner that converts a string of the form "x_1 , y_1, x_2, y_2" to [x_1 , y_1, x_2, y_2]
+                int [] segment = Stream.of(line.split(",")).mapToInt(Integer::parseInt).toArray();
+                // We use the bucketMapID structure to identify to which bucket does the point belong to.
+                int bucketID = bucketMapID.floorEntry(segment[coord]).getValue();
+                // Add the line (segment) to its corresponding bucket buffer.
+                bucketBuffers.get(bucketID).add(line);
+                // Update the size of the bucket buffer after adding new segment.
+                int bucketSize = bucketBufferSizes[bucketID];
+                bucketBufferSizes[bucketID] = bucketSize + line.getBytes().length;
+
+                /*
+                * After each insert in a buffer we need to check if its size has reached the maximum. If it has
+                * we need to flush it to secondary memory.
+                * */
+                if(bucketBufferSizes[bucketID] >= B){
+                    // CREATE and APPEND and both required options so as to create a new file if it does not exist, and
+                    // if it does exist append new lines to it.
+                    Files.write(buckets.get(bucketID),bucketBuffers.get(bucketID),CREATE,APPEND);
+                    bucketBuffers.get(bucketID).clear();
+                    bucketBufferSizes[bucketID] = 0;
+                }
+            }
 
         }
 
+        /*
+        for (List<String> bucket: bucketBuffers) {
+            System.out.println("Buckets contains:");
+            for (String segment: bucket) {
+                System.out.println(segment);
+            }
+            System.out.println("End of bucket");
+        }
+        */
 
+        /*
+        * After we are done we flush the remaining segments inside any buffer.
+        * */
+        for (int i = 0; i < bucketBufferSizes.length; i++) {
+            if(bucketBufferSizes[i] > 0){
+                Files.write(buckets.get(i),bucketBuffers.get(i),CREATE,APPEND);
+            }
+        }
+    }
+
+    /*
+    *  Creates a NavigableMap in which the keys are the pivots and the values are the buckets identifiers.
+    *  For example, given pivots 3 - 6 - 17 the NM would look like this:
+    *  < -Integer.MIN_VALUE, 0> ----> First bucket
+    *  < 3 , 1 >
+    *  < 6 , 2 >
+    *  < 17, 3 >
+    *  This way every time a point consults the NM if its value if lower than 3, it returns 0.
+    *  If its value is greater or equal than 3 but lower than 6, it would return 1.
+    *
+    *  pivots : List of integers, each one is a pivot.
+    * */
+    public static NavigableMap<Integer, Integer> generateBucketMapID(List<Integer> pivots){
+        NavigableMap<Integer, Integer> bucketMapID = new TreeMap<Integer, Integer>();
+
+        bucketMapID.put(Integer.MIN_VALUE, 0);
+
+        int i = 1;
+        for (int p: pivots) {
+            bucketMapID.put(p, i);
+            i++;
+        }
+
+        return bucketMapID;
     }
 
 
@@ -240,10 +333,10 @@ public class Main {
     * a segment to it.
     * S: See pdf. Corresponds to min(m , n/m)
     * */
-    public static List<List<Integer>> getBucketsBuffers(int S){
-        List<List<Integer>> bucketBufferList = new ArrayList<>();
+    public static List<List<String>> getBucketsBuffers(int S){
+        List<List<String>> bucketBufferList = new ArrayList<>();
         for (int i = 0; i < S; i++) {
-            bucketBufferList.add(new ArrayList<Integer>());
+            bucketBufferList.add(new ArrayList<String>());
         }
         return bucketBufferList;
     }
@@ -258,7 +351,8 @@ public class Main {
         List<Path> buckets = new ArrayList<>();
         for (int i = 0; i < S; i++) {
             // Paths.get just Constructs a Path, in which every argument is a component of the path.
-            Path bucketFile = Paths.get("buckets", String.format("%d.csv", bucketNameGenerator.nextInt()));
+            //Path bucketFile = Paths.get("Buckets", String.format("%d.csv", bucketNameGenerator.nextInt()));
+            Path bucketFile = Paths.get(String.format("%d.csv", bucketNameGenerator.nextInt()));
             buckets.add(bucketFile);
         }
 
@@ -271,7 +365,7 @@ public class Main {
     * input : Input file. Using a FileChannel allows us read B bytes from the file.
     * B : Size of chunks we read from the file (bytes).
     * */
-    public static List<int[]> getInputBuffer(FileChannel input, int B) throws IOException{
+    public static List<String> getInputBuffer(FileChannel input, int B) throws IOException{
 
         /*
         * A big problem in reading text files by a certain amount of bytes is dealing with line cuts.
@@ -289,7 +383,7 @@ public class Main {
         byteBuffer.flip();
 
         // Lines is the list in which we will store the segments read from the chunk of size B.
-        List<int[]> lines = new ArrayList<>();
+        List<String> lines = new ArrayList<>();
         String lineString = "";
         char c;
 
@@ -329,8 +423,8 @@ public class Main {
              * component to an integer, then an array of integers.
             */
             //System.out.println(lineString);
-            segments = Stream.of(lineString.split(",")).mapToInt(Integer::parseInt).toArray();
-            lines.add(segments);
+            //segments = Stream.of(lineString.split(",")).mapToInt(Integer::parseInt).toArray();
+            lines.add(lineString);
             lineString = "";
         }
 
