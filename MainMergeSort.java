@@ -300,14 +300,14 @@ public class Main {
 
             // We get the first char from the buffer and check if it is a end of line.
             c = (char)byteBuffer.get();
-            if(c == '\n' && !byteBuffer.hasRemaining()){
+            if(c == System.lineSeparator().charAt(0) && !byteBuffer.hasRemaining()){
                 EOBuffer = true;
             }
             // This case happens when the last chunk read left us at the end of a line.
-            if(c == '\n' && byteBuffer.hasRemaining()){
+            if(c == System.lineSeparator().charAt(0) && byteBuffer.hasRemaining()){
                 c = (char)byteBuffer.get();
             }
-            while(c != '\n'){
+            while(c != System.lineSeparator().charAt(0)){
                 lineString += c;
                 /*
                 * While we don't see an end of line we keep on reading the line. Mind the fact that if we are in a line
@@ -342,10 +342,10 @@ public class Main {
         int fileRewind = 0;
         int bufferPosition = byteBuffer.position()-1;
         char lastCharRead = (char)byteBuffer.get(bufferPosition);
-        if(lastCharRead != '\n'){
+        if(lastCharRead != System.lineSeparator().charAt(0)){
             bufferPosition--;
             lastCharRead = (char)byteBuffer.get(bufferPosition);
-            while(lastCharRead != '\n'){
+            while(lastCharRead != System.lineSeparator().charAt(0)){
                 fileRewind++;
                 bufferPosition--;
                 lastCharRead = (char)byteBuffer.get(bufferPosition);
