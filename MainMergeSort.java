@@ -27,9 +27,9 @@ public class Main {
     static int M;
     static int m;
     static Random nameGenerator = new Random();
+    static int numberOfDiskIO = 0;
 
     public static void main(String[] args) throws IOException{
-	    // write your code here
         Path inputPath;
         FileChannel input;
 
@@ -39,6 +39,7 @@ public class Main {
         B = Integer.parseInt(args[0]);
         M = Integer.parseInt(args[1]);
         m = (int)Math.ceil(M/B);
+
 
         List<Path> paths = phaseOne(input, 'x');
 
@@ -55,6 +56,8 @@ public class Main {
         for (Path path: paths) {
             System.out.println(path.toString());
         }
+
+        System.out.println("Number of Disk IO: "+numberOfDiskIO);
 
 
     }
@@ -180,7 +183,7 @@ public class Main {
                 }
 
             } else{
-                Files.write(outputFilePath,outputBuffer,CREATE,APPEND);
+                writeSortedRunToSM(outputBuffer,outputFilePath);
                 outputBuffer.clear();
                 outputBufferSize = 0;
             }
@@ -188,7 +191,8 @@ public class Main {
         }
 
         /* Before returning we write the remaining segments in the output buffer to the output file. */
-        Files.write(outputFilePath,outputBuffer,CREATE,APPEND);
+        writeSortedRunToSM(outputBuffer,outputFilePath);
+
 
         /* We add the newly created sorted run -its path- (product of merging O(m) sorted runs) to the lists of sorted runs. */
         sortedRuns.add(outputFilePath);
@@ -274,6 +278,8 @@ public class Main {
         * amount of lines. In this case we need to rewind the file pointer to the last \n read. So we can start
         * from there the next time.
         * */
+
+        numberOfDiskIO++;
 
         boolean EOBuffer = false;
         // Here we create our byte buffer with a fixed size B.
@@ -394,8 +400,8 @@ public class Main {
     * Path path : Path to file in which the sorted run is going to be written.
     * */
     public static void writeSortedRunToSM(List<String> sortedRun, Path path) throws IOException{
-        //Path path = Paths.get(String.format("%d.csv", nameGenerator.nextInt()));
-        Files.write(path, sortedRun);
+        numberOfDiskIO++;
+        Files.write(path, sortedRun,CREATE,APPEND);
     }
 
     /*
