@@ -1,6 +1,6 @@
 /*
 * For this script to run correctly one must have a folder in the same directory filled with the input files.
-* The name of this folder is passed in as the 3 argument. 
+* The name of this folder is passed in as the 3 argument.
 * Usage: Main B M InputsFolder CoordinateToSortBy
 * Last test : 21/05/2017
 * Arguments : 40000 400000 Inputs x
@@ -67,6 +67,7 @@ public class Main {
             String line = String.format(aPath.getFileName().toString()+","+"%d"+System.lineSeparator(), numberOfDiskIO);
             // Write to it.
             Files.write(resultPath, line.getBytes(), CREATE, APPEND);
+            System.out.println("Finished sorting file: "+aPath.getFileName().toString());
         }
 
 
@@ -201,10 +202,10 @@ public class Main {
                     /* Else, it means that the input buffer is empty and the corresponding file has nothing new to read from. Thus
                     *  we have reached the end of that sorted run and we can delete it. */
                     else{
-                      inputBuffers.remove(minLocation);
-                      Files.delete(sortedRuns.get(minLocation));
-                      inputFiles.remove(minLocation);
-                      sortedRuns.remove(minLocation);
+                        inputBuffers.remove(minLocation);
+                        Files.delete(sortedRuns.get(minLocation));
+                        inputFiles.remove(minLocation);
+                        sortedRuns.remove(minLocation);
                     }
                 }
 
@@ -467,15 +468,27 @@ public class Main {
                 //  S1_y1 = S2_y1 and S1_y2 = S2_y2
                 if (Integer.compare(segmentOne[1], segmentTwo[1]) == 0 && Integer.compare(segmentOne[3], segmentTwo[3]) == 0){
 
-                    // Note that a segment is vertical if both of its y coordinates are the same.
-                    // So if Segment one is vertical, we claim it larger by comparison.
-                    if(Integer.compare(segmentOne[0], segmentOne[2]) == 0){
+                    // Note that a segment is vertical if both of its x coordinates are the same.
+                    // If both segments are vertical its a tie.
+                    if(Integer.compare(segmentOne[0], segmentOne[2]) == 0 && Integer.compare(segmentTwo[0], segmentTwo[2]) == 0){
+                        return 0;
+                    }
+                    // If segmentOne is vertical and segmentTwo horizontal, then segmentOne > segmentTwo. We return 1.
+                    else if(Integer.compare(segmentOne[0], segmentOne[2]) == 0 && Integer.compare(segmentTwo[0], segmentTwo[2]) != 0){
                         return 1;
-                    }else{
+                    }
+                    // If segmentOne if horizontal and segmentTwo is vertical, then segmentOne < segmentTwo. We return -1.
+                    else if(Integer.compare(segmentOne[0], segmentOne[2]) != 0 && Integer.compare(segmentTwo[0], segmentTwo[2]) == 0){
                         return -1;
                     }
-                    // Case 2: The two segments differ in at least one y coordinate.
-                }else{
+                    // If both segments are horizontal and have the same y coordinates, then its a tie.
+                    else{
+                        return 0;
+                    }
+
+                }
+                // Case 2: The two segments differ in at least one y coordinate.
+                else{
                     if (Integer.compare(segmentOne[1], segmentTwo[1]) == 0){
                         return Integer.compare(segmentOne[3], segmentTwo[3]);
                     }else{
